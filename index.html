@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payback Keola 2026 — SP e Farm</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 0.25rem; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 1.25rem; }
+  .section-title { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 1.25rem; }
+
+  .view-toggle { display: flex; gap: 0; margin-bottom: 1.5rem; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5; width: fit-content; }
+  .view-btn { padding: 10px 28px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: #fff; color: #888; transition: all 0.15s; }
+  .view-btn.active.sp   { background: #185FA5; color: #fff; }
+  .view-btn.active.farm { background: #1D9E75; color: #fff; }
+  .view-btn:not(:last-child) { border-right: 1px solid #e5e5e5; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+
+  .metric { background: #fff; border-radius: 10px; border: 1px solid #e5e5e5; padding: 0.85rem 1rem; text-align: center; }
+  .metric.verde { border: 2px solid #1D9E75; }
+  .metric.azul  { border: 2px solid #185FA5; }
+  .metric.amber { border: 2px solid #BA7517; }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 500; }
+  .metric-sub   { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5; margin-bottom: 1.25rem; }
+  .hist-table th { background: #f5f5f3; padding: 8px 14px; text-align: left; font-weight: 500; font-size: 12px; color: #888; border-bottom: 1px solid #e5e5e5; }
+  .hist-table td { padding: 8px 14px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .hist-table tr:last-child td { border-bottom: none; }
+  .hist-table .total-row td { font-weight: 500; background: #fafaf8; border-top: 1px solid #e5e5e5; }
+  .up   { color: #1D9E75; font-weight: 500; }
+  .down { color: #E24B4A; font-weight: 500; }
+  .neu  { color: #888; }
+  .warn { color: #BA7517; font-weight: 500; }
+
+  .controls { background: #fff; border-radius: 10px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 14px; }
+  .ctrl-row { display: flex; align-items: center; gap: 12px; }
+  .ctrl-label { font-size: 13px; color: #555; min-width: 230px; line-height: 1.4; }
+  .ctrl-tag { font-size: 10px; color: #aaa; display: block; }
+  .ctrl-val { font-size: 14px; font-weight: 500; min-width: 65px; text-align: right; }
+  input[type=range] { flex: 1; cursor: pointer; }
+  input[type=range].sp-color   { accent-color: #185FA5; }
+  input[type=range].junho      { accent-color: #BA7517; }
+  input[type=range].julho      { accent-color: #378ADD; }
+  input[type=range].farm-color { accent-color: #1D9E75; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; border-radius: 20px; border: 1px solid #e5e5e5; font-size: 13px; cursor: pointer; background: #fff; color: #555; transition: all 0.15s; }
+  .tab.active.sp   { background: #185FA5; color: #fff; border-color: #185FA5; }
+  .tab.active.farm { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+
+  .ref-box { border-radius: 6px; padding: 0.75rem 1rem; font-size: 13px; margin-bottom: 1.25rem; }
+  .ref-box.sp-ref   { background: #E6F1FB; border-left: 3px solid #185FA5; color: #0C447C; }
+  .ref-box.farm-ref { background: #FAEEDA; border-left: 3px solid #BA7517; color: #633806; }
+
+  .insight { border-radius: 6px; padding: 0.75rem 1rem; font-size: 13px; margin-bottom: 1.25rem; }
+  .insight.blue  { background: #E6F1FB; border-left: 3px solid #185FA5; color: #0C447C; }
+  .insight.green { background: #EAF3DE; border-left: 3px solid #639922; color: #3B6D11; }
+
+  .chart-wrap { background: #fff; border-radius: 10px; border: 1px solid #e5e5e5; padding: 1.25rem; position: relative; height: 300px; margin-bottom: 0.75rem; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #888; margin-bottom: 1.5rem; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .dot  { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .dash { width: 18px; height: 0; border-top: 2px dashed #E24B4A; display: inline-block; }
+
+  .month-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5; margin-bottom: 1.5rem; }
+  .month-table th { background: #f5f5f3; padding: 8px 12px; text-align: left; font-weight: 500; font-size: 12px; color: #888; border-bottom: 1px solid #e5e5e5; }
+  .month-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  .month-table tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .badge.obra-sp   { background: #E6F1FB; color: #0C447C; }
+  .badge.obra-f    { background: #E1F5EE; color: #0F6E56; }
+  .badge.pos-sp    { background: #F1EFE8; color: #5F5E5A; }
+  .badge.pos-f     { background: #F1EFE8; color: #5F5E5A; }
+  .badge.junho-ev  { background: #FAEEDA; color: #633806; }
+  .badge.julho-ev  { background: #E6F1FB; color: #0C447C; }
+  .badge.breakeven { background: #EAF3DE; color: #3B6D11; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  @media (max-width: 700px) {
+    body { padding: 1rem; }
+    .grid3 { grid-template-columns: 1fr; }
+    .ctrl-row { flex-direction: column; align-items: stretch; }
+    .ctrl-label, .ctrl-val { min-width: auto; text-align: left; }
+    .view-btn { padding: 10px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Payback — Keola 2026</h1>
+<p class="sub">Obra paralela · Investimento R$250k · Base: 2025 + Q1 2026</p>
+
+<div class="view-toggle">
+  <button class="view-btn active sp" onclick="switchView('sp',this)">FATURAMENTO SP</button>
+  <button class="view-btn farm" onclick="switchView('farm',this)">FATURAMENTO FARM</button>
+</div>
+
+<div class="view active" id="view-sp">
+  <p class="section-title">Histórico SP</p>
+  <table class="hist-table">
+    <thead><tr><th>Período</th><th>Mês</th><th>Lucro</th><th>Obs</th></tr></thead>
+    <tbody>
+      <tr><td>2025 completo</td><td>Total</td><td><strong>R$1.188.101</strong></td><td class="neu">ano completo</td></tr>
+      <tr><td>2025 completo</td><td>Média mensal</td><td><strong>R$99k</strong></td><td class="neu">1.188.101 ÷ 12</td></tr>
+      <tr><td rowspan="3">Q1 2026</td><td>Janeiro</td><td>R$14k</td><td class="down">atípico — muito baixo</td></tr>
+      <tr><td>Fevereiro</td><td>R$115k</td><td class="up">+16% vs média 2025</td></tr>
+      <tr><td>Março</td><td>R$148k</td><td class="up">+49% vs média 2025</td></tr>
+      <tr class="total-row"><td>Q1 2026</td><td>Média (3 meses)</td><td><strong>R$92k</strong></td><td class="neu">276k ÷ 3</td></tr>
+      <tr class="total-row"><td>Q1 2026</td><td>Média Fev+Mar (excl. Jan)</td><td><strong>R$132k</strong></td><td class="up">tendência atual</td></tr>
+    </tbody>
+  </table>
+
+  <div class="ref-box sp-ref">
+    <strong>SP crescendo forte.</strong> Fev+Mar 2026 média de <strong>R$132k/mês</strong> — +33% acima da média 2025 (R$99k). Janeiro (R$14k) foi claramente atípico. Slider parte de R$99k — teste com R$132k para cenário tendência atual.
+  </div>
+
+  <p class="section-title">Configurar cenário SP 2026</p>
+  <div class="controls">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Início da obra</span>
+      <div class="tabs" id="sp-start-tabs">
+        <button class="tab active sp" onclick="setStartSP(3,this)">Abril</button>
+        <button class="tab" onclick="setStartSP(4,this)">Maio</button>
+        <button class="tab" onclick="setStartSP(5,this)">Junho</button>
+        <button class="tab" onclick="setStartSP(6,this)">Julho</button>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">
+        Lucro mensal SP 2026
+        <span class="ctrl-tag">R$99k = média 2025 · R$132k = tendência Fev-Mar 2026</span>
+      </span>
+      <input type="range" class="sp-color" id="sp-lucro" min="60" max="220" value="99" step="1" oninput="updateSP()">
+      <span class="ctrl-val" id="sp-lucro-val">R$99k</span>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="metric amber">
+      <p class="metric-label">Recuperado durante obra</p>
+      <p class="metric-value" id="sp-v-durante" style="color:#BA7517;">—</p>
+      <p class="metric-sub">3 meses × lucro/mês</p>
+    </div>
+    <div class="metric azul">
+      <p class="metric-label">Payback total</p>
+      <p class="metric-value" id="sp-v-total" style="color:#185FA5;">—</p>
+      <p class="metric-sub">início obra → break-even</p>
+    </div>
+    <div class="metric">
+      <p class="metric-label">Restante pós-obra</p>
+      <p class="metric-value" id="sp-v-restante">—</p>
+      <p class="metric-sub" id="sp-s-restante">—</p>
+    </div>
+  </div>
+
+  <div class="insight blue" id="sp-insight">Calculando...</div>
+
+  <p class="section-title">Recuperação acumulada — SP</p>
+  <div class="chart-wrap">
+    <canvas id="sp-chart" role="img" aria-label="Payback SP acumulado mês a mês">Gráfico payback SP.</canvas>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#85B7EB;"></span>Durante obra</span>
+    <span><span class="dot" style="background:#B5D4F4;"></span>Pós-obra (negativo)</span>
+    <span><span class="dot" style="background:#1D9E75;"></span>Break-even atingido</span>
+    <span><span class="dash"></span>R$250k</span>
+  </div>
+
+  <p class="section-title">Detalhe mês a mês — SP</p>
+  <table class="month-table">
+    <thead><tr><th>Mês</th><th>Fase</th><th>Lucro mês</th><th>Acumulado</th><th>Falta</th></tr></thead>
+    <tbody id="sp-tbody"></tbody>
+  </table>
+</div>
+
+<div class="view" id="view-farm">
+  <p class="section-title">Histórico Farm</p>
+  <table class="hist-table">
+    <thead><tr><th>Período</th><th>Mês</th><th>Lucro</th><th>Obs</th></tr></thead>
+    <tbody>
+      <tr><td>2025 completo</td><td>Total</td><td><strong>R$485k</strong></td><td class="neu">ano completo</td></tr>
+      <tr><td>2025 completo</td><td>Média mensal</td><td><strong>R$40k</strong></td><td class="neu">485k ÷ 12</td></tr>
+      <tr><td>2025 — eventos</td><td>Julho</td><td><strong>R$95k</strong></td><td class="up">FWS + Greenhouse + ZBreak</td></tr>
+      <tr><td>2025 — normal</td><td>Média 11 meses</td><td><strong>R$35k</strong></td><td class="neu">(485k − 95k) ÷ 11</td></tr>
+      <tr><td rowspan="3">Q1 2026</td><td>Janeiro</td><td>R$25k</td><td class="neu">normal</td></tr>
+      <tr><td>Fevereiro</td><td>R$33k</td><td class="neu">normal</td></tr>
+      <tr><td>Março</td><td>R$54k</td><td class="up">crescendo</td></tr>
+      <tr class="total-row"><td>Q1 2026</td><td>Média (3 meses)</td><td><strong>R$38k</strong></td><td class="neu">113k ÷ 3 — consistente</td></tr>
+    </tbody>
+  </table>
+
+  <div class="ref-box farm-ref">
+    <strong>Referência eventos 2025:</strong> Julho com FWS + 1 Greenhouse + ZBreak → <strong>R$95k</strong>.
+    Em 2026: Junho = Retiro Vox + FWS · Julho = 2× Greenhouse + ZBreak.
+  </div>
+
+  <p class="section-title">Configurar cenário Farm 2026</p>
+  <div class="controls">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Início da obra</span>
+      <div class="tabs" id="farm-start-tabs">
+        <button class="tab active farm" onclick="setStartFarm(3,this)">Abril</button>
+        <button class="tab" onclick="setStartFarm(4,this)">Maio</button>
+        <button class="tab" onclick="setStartFarm(5,this)">Junho</button>
+        <button class="tab" onclick="setStartFarm(6,this)">Julho</button>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">
+        <strong>Junho 2026</strong> — Retiro Vox + FWS
+        <span class="ctrl-tag">ref: Jul 2025 com 3 eventos = R$95k</span>
+      </span>
+      <input type="range" class="junho" id="farm-jun" min="10" max="200" value="70" step="1" oninput="updateFarm()">
+      <span class="ctrl-val" id="farm-jun-val">R$70k</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">
+        <strong>Julho 2026</strong> — 2× Greenhouse + ZBreak
+        <span class="ctrl-tag">ref: Jul 2025 = R$95k · 2 Greenhouses tende a superar</span>
+      </span>
+      <input type="range" class="julho" id="farm-jul" min="10" max="200" value="95" step="1" oninput="updateFarm()">
+      <span class="ctrl-val" id="farm-jul-val">R$95k</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">
+        Lucro meses normais Farm 2026
+        <span class="ctrl-tag">base R$35k (2025 sem eventos) · Q1 2026: R$38k</span>
+      </span>
+      <input type="range" class="farm-color" id="farm-pos" min="20" max="100" value="35" step="1" oninput="updateFarm()">
+      <span class="ctrl-val" id="farm-pos-val">R$35k</span>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="metric amber">
+      <p class="metric-label">Recuperado durante obra</p>
+      <p class="metric-value" id="farm-v-durante" style="color:#BA7517;">—</p>
+      <p class="metric-sub">3 meses de obra</p>
+    </div>
+    <div class="metric verde">
+      <p class="metric-label">Payback total</p>
+      <p class="metric-value" id="farm-v-total" style="color:#1D9E75;">—</p>
+      <p class="metric-sub">início obra → break-even</p>
+    </div>
+    <div class="metric">
+      <p class="metric-label">Jun + Jul 2026 combinado</p>
+      <p class="metric-value" id="farm-v-junjul">—</p>
+      <p class="metric-sub" id="farm-s-junjul">vs R$95k Jul 2025</p>
+    </div>
+  </div>
+
+  <div class="insight green" id="farm-insight">Calculando...</div>
+
+  <p class="section-title">Recuperação acumulada — Farm</p>
+  <div class="chart-wrap">
+    <canvas id="farm-chart" role="img" aria-label="Payback Farm acumulado mês a mês">Gráfico payback Farm.</canvas>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#9FE1CB;"></span>Obra — normal</span>
+    <span><span class="dot" style="background:#EF9F27;"></span>Junho — Retiro Vox + FWS</span>
+    <span><span class="dot" style="background:#378ADD;"></span>Julho — 2× Greenhouse + ZBreak</span>
+    <span><span class="dot" style="background:#B5D4F4;"></span>Pós-obra (negativo)</span>
+    <span><span class="dot" style="background:#1D9E75;"></span>Break-even atingido</span>
+    <span><span class="dash"></span>R$250k</span>
+  </div>
+
+  <p class="section-title">Detalhe mês a mês — Farm</p>
+  <table class="month-table">
+    <thead><tr><th>Mês</th><th>Fase / Evento</th><th>Lucro mês</th><th>Acumulado</th><th>Falta</th></tr></thead>
+    <tbody id="farm-tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const INVEST = 250;
+const MONTH_NAMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const FARM_NORMAL = 35;
+
+let spStart=3, spLucro=99, spChart=null;
+let farmStart=3, farmJun=70, farmJul=95, farmPos=35, farmChart=null;
+
+function calcRows(startMonth, getLucro) {
+  const rows=[]; let acum=0;
+  const obraEnd=startMonth+3; let done=false;
+  for(let i=startMonth; i<30&&!done; i++){
+    const mi=i%12, fase=i<obraEnd?'obra':'pos';
+    const lucro=getLucro(mi,fase);
+    const prev=acum; acum+=lucro;
+    rows.push({month:MONTH_NAMES[mi],mi,fase,lucro,acum,falta:Math.max(0,INVEST-acum),breakeven:prev<INVEST&&acum>=INVEST});
+    if(acum>=INVEST) done=true;
+    if(rows.length>16) done=true;
+  }
+  return rows;
+}
+
+function makeChart(canvasId, rows, getColor) {
+  return new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{labels:rows.map(r=>r.month),datasets:[
+      {label:'Acumulado',data:rows.map(r=>Math.round(r.acum)),backgroundColor:rows.map(getColor),borderRadius:4,order:2},
+      {label:'Meta',data:Array(rows.length).fill(INVEST),type:'line',borderColor:'#E24B4A',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false,order:1}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:250},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:ctx=>ctx.datasetIndex===0?(ctx.parsed.y>=INVEST?`Acumulado: R$${ctx.parsed.y}k ✓`:`Acumulado: R$${ctx.parsed.y}k`):`Meta: R$${ctx.parsed.y}k`,
+        afterLabel:ctx=>ctx.datasetIndex===0&&ctx.parsed.y<INVEST?`Falta: R$${INVEST-ctx.parsed.y}k`:''
+      }}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:12}}},
+        y:{grid:{color:'rgba(0,0,0,0.06)'},max:400,ticks:{font:{size:12},callback:v=>`R$${v}k`}}
+      }
+    }
+  });
+}
+
+function refreshChart(chart,rows,getColor){
+  chart.data.labels=rows.map(r=>r.month);
+  chart.data.datasets[0].data=rows.map(r=>Math.round(r.acum));
+  chart.data.datasets[0].backgroundColor=rows.map(getColor);
+  chart.data.datasets[1].data=Array(rows.length).fill(INVEST);
+  chart.update();
+}
+
+function updateSP(){
+  spLucro=parseInt(document.getElementById('sp-lucro').value);
+  document.getElementById('sp-lucro-val').textContent=`R$${spLucro}k`;
+  const rows=calcRows(spStart,()=>spLucro);
+  const durante=spLucro*3;
+  const restante=Math.max(0,INVEST-durante);
+  const total=rows.length;
+  document.getElementById('sp-v-durante').textContent=`R$${durante}k`;
+  document.getElementById('sp-v-total').textContent=`${total} ${total===1?'mês':'meses'}`;
+  document.getElementById('sp-v-restante').textContent=restante===0?'R$0k — quitado':`R$${restante}k`;
+  document.getElementById('sp-s-restante').textContent=restante===0?'100% quitado durante obra':`250k − ${durante}k`;
+  document.getElementById('sp-insight').innerHTML=
+    `SP iniciando em <strong>${MONTH_NAMES[spStart%12]}</strong> com <strong>R$${spLucro}k/mês</strong>. `+
+    `Recupera <strong>R$${durante}k durante a obra</strong>. `+
+    (restante===0
+      ?`<strong style="color:#1D9E75;">Investimento 100% quitado durante a obra!</strong>`
+      :`Restante de <strong>R$${restante}k</strong> quitado em <strong>${total-3} ${total-3===1?'mês':'meses'}</strong> pós-obra.`)+
+    ` Payback total: <strong>${total} ${total===1?'mês':'meses'}</strong>.`;
+  const getColor=r=>r.fase==='obra'?'#85B7EB':r.acum>=INVEST?'#1D9E75':'#B5D4F4';
+  if(!spChart){spChart=makeChart('sp-chart',rows,getColor);}else{refreshChart(spChart,rows,getColor);}
+  const tbody=document.getElementById('sp-tbody');
+  tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(r.breakeven)tr.style.background='#f0faf4';
+    const badge=r.fase==='obra'?'<span class="badge obra-sp">Obra</span>':r.breakeven?'<span class="badge breakeven">Break-even ✓</span>':'<span class="badge pos-sp">Pós-obra</span>';
+    tr.innerHTML=`<td style="font-weight:500;">${r.month}</td><td>${badge}</td><td>R$${Math.round(r.lucro)}k</td><td>R$${Math.round(r.acum)}k</td><td style="color:${r.falta===0?'#1D9E75':'#aaa'};">${r.falta===0?'—':'R$'+Math.round(r.falta)+'k'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setStartSP(m,btn){
+  spStart=m;
+  document.querySelectorAll('#sp-start-tabs .tab').forEach(t=>t.classList.remove('active','sp'));
+  btn.classList.add('active','sp');
+  updateSP();
+}
+
+function updateFarm(){
+  farmJun=parseInt(document.getElementById('farm-jun').value);
+  farmJul=parseInt(document.getElementById('farm-jul').value);
+  farmPos=parseInt(document.getElementById('farm-pos').value);
+  document.getElementById('farm-jun-val').textContent=`R$${farmJun}k`;
+  document.getElementById('farm-jul-val').textContent=`R$${farmJul}k`;
+  document.getElementById('farm-pos-val').textContent=`R$${farmPos}k`;
+  const rows=calcRows(farmStart,(mi,fase)=>{
+    if(mi===5)return farmJun;
+    if(mi===6)return farmJul;
+    return fase==='obra'?FARM_NORMAL:farmPos;
+  });
+  const durante=rows.filter(r=>r.fase==='obra').reduce((s,r)=>s+r.lucro,0);
+  const junjul=farmJun+farmJul;
+  const diff=junjul-95;
+  document.getElementById('farm-v-durante').textContent=`R$${Math.round(durante)}k`;
+  document.getElementById('farm-v-total').textContent=`${rows.length} ${rows.length===1?'mês':'meses'}`;
+  document.getElementById('farm-v-junjul').textContent=`R$${junjul}k`;
+  document.getElementById('farm-s-junjul').textContent=diff>=0?`+R$${diff}k vs Jul 2025 (R$95k)`:`-R$${Math.abs(diff)}k vs Jul 2025 (R$95k)`;
+  document.getElementById('farm-insight').innerHTML=
+    `Farm iniciando em <strong>${MONTH_NAMES[farmStart%12]}</strong>. `+
+    `Meses normais de obra: <strong>R$${FARM_NORMAL}k</strong>. `+
+    `Jun + Jul 2026 somam <strong>R$${junjul}k</strong> `+
+    `(${diff>=0?`<strong style="color:#1D9E75;">+R$${diff}k acima</strong>`:`<strong style="color:#E24B4A;">R$${Math.abs(diff)}k abaixo</strong>`} do R$95k de Jul 2025). `+
+    `Break-even em <strong>${rows.length} meses</strong> do início da obra.`;
+  const getColor=r=>{
+    if(r.mi===5)return'#EF9F27';
+    if(r.mi===6)return'#378ADD';
+    if(r.fase==='obra')return'#9FE1CB';
+    return r.acum>=INVEST?'#1D9E75':'#B5D4F4';
+  };
+  if(!farmChart){farmChart=makeChart('farm-chart',rows,getColor);}else{refreshChart(farmChart,rows,getColor);}
+  const tbody=document.getElementById('farm-tbody');
+  tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(r.breakeven)tr.style.background='#f0faf4';
+    let badge='',cor='#1a1a1a',fw='400';
+    if(r.mi===5){badge=`<span class="badge junho-ev">${r.fase==='obra'?'Obra + ':''}Retiro Vox + FWS</span>`;cor='#BA7517';fw='500';}
+    else if(r.mi===6){badge=`<span class="badge julho-ev">${r.fase==='obra'?'Obra + ':''}2× Greenhouse + ZBreak</span>`;cor='#185FA5';fw='500';}
+    else if(r.fase==='obra'){badge='<span class="badge obra-f">Obra</span>';}
+    else if(r.breakeven){badge='<span class="badge breakeven">Break-even ✓</span>';}
+    else{badge='<span class="badge pos-f">Pós-obra</span>';}
+    tr.innerHTML=`<td style="font-weight:500;">${r.month}</td><td>${badge}</td><td style="color:${cor};font-weight:${fw};">R$${Math.round(r.lucro)}k</td><td>R$${Math.round(r.acum)}k</td><td style="color:${r.falta===0?'#1D9E75':'#aaa'};">${r.falta===0?'—':'R$'+Math.round(r.falta)+'k'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setStartFarm(m,btn){
+  farmStart=m;
+  document.querySelectorAll('#farm-start-tabs .tab').forEach(t=>t.classList.remove('active','farm'));
+  btn.classList.add('active','farm');
+  updateFarm();
+}
+
+function switchView(v,btn){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.view-btn').forEach(el=>el.classList.remove('active','sp','farm'));
+  document.getElementById('view-'+v).classList.add('active');
+  btn.classList.add('active',v);
+}
+
+updateSP(); updateFarm();
+</script>
+</body>
+</html>
